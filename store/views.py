@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
-
+from .forms import ContactForm
 from .models import Album, Artist, Contact, Booking
 
 
@@ -37,7 +37,40 @@ def detail(request, album_id):
         'album_id': album.id,
         'thumbnail': album.picture
     }
-    # solidays
+    if request.method == 'POST':
+        form = ContactForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            name = form.cleaned_data['name']
+
+            contact = Contact.objects.filter(email=email)
+            if not contact.exists():
+                # If a contact is not registered, create a new one.
+                contact = Contact.objects.create(
+                    email=email,
+                    name=name
+                )
+            else:
+                contact = contact.first()
+
+            album = get_object_or_404(Album, id=album_id)
+            booking = Booking.objects.create(
+                contact=contact,
+                album=album
+            )
+            album.available = False
+            album.save()
+            context = {
+                'album_title': album.title
+            }
+            return render(request, 'store/merci.html', context)
+        else:
+            # Form data doesn't match the expected format.
+            # Add errors to the template.
+            context['errors'] = form.errors.items()
+    else:
+        form = ContactForm()
+    context['form'] = form
     return render(request, 'store/detail.html', context)
 
 def search(request):
