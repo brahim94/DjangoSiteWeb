@@ -1,8 +1,10 @@
 from django.shortcuts import render, get_object_or_404
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
-from .forms import ParagraphErrorList, ContactForm
+from django.db import transaction, IntegrityError
+
 from .models import Album, Artist, Contact, Booking
-from django.db import transaction 
+from .forms import ContactForm
+from .forms import ContactForm, ParagraphErrorList
 
 
 def index(request):
@@ -14,7 +16,7 @@ def index(request):
 
 def listing(request):
     albums_list = Album.objects.filter(available=True)
-    paginator = Paginator(albums_list, 3)
+    paginator = Paginator(albums_list, 9)
     page = request.GET.get('page')
     try:
         albums = paginator.page(page)
@@ -27,6 +29,7 @@ def listing(request):
         'paginate': True
     }
     return render(request, 'store/listing.html', context)
+
 @transaction.atomic
 def detail(request, album_id):
     album = get_object_or_404(Album, pk=album_id)
@@ -43,6 +46,7 @@ def detail(request, album_id):
         if form.is_valid():
             email = form.cleaned_data['email']
             name = form.cleaned_data['name']
+
             try:
                 with transaction.atomic():
                     contact = Contact.objects.filter(email=email)
@@ -66,15 +70,11 @@ def detail(request, album_id):
                         'album_title': album.title
                     }
                     return render(request, 'store/merci.html', context)
-                    
-                        # Form data doesn't match the expected format.
-                        # Add errors to the template.
-                        
             except IntegrityError:
-                form.errors['internal'] = "Une erreur interne est apparue. Merci de recommencer votre requete"
-    
+                form.errors['internal'] = "Une erreur interne est apparue. Merci de recommencer votre requête."
     else:
         form = ContactForm()
+
     context['form'] = form
     context['errors'] = form.errors.items()
     return render(request, 'store/detail.html', context)
