@@ -22,7 +22,7 @@ from store import views
 #from django.urls import path
 
 urlpatterns = [
-    url(r'^$', views.index),
+    url(r'^$', views.index, name="index"),
     url(r'^store/', include(('store.urls','store'), namespace='store')),
     url(r'^admin/', admin.site.urls)
 ]
